@@ -1,0 +1,42 @@
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+# deoptimm
+
+<!-- badges: start -->
+
+![Author](https://img.shields.io/badge/author-Eduardo%20L.%20T.%20Conceição-green.svg)
+![Lifecycle:
+maturing](https://img.shields.io/badge/lifecycle-maturing-blue.svg)
+[![Code port
+from](https://img.shields.io/badge/code%20port%20from-DEoptimR-yellow.svg)](https://cran.r-project.org/package=DEoptimR)
+<!-- badges: end -->
+
+## Overview
+
+Differential Evolution (DE) stochastic algorithms for global
+optimization of problems with and without constraints. The aim is to
+curate a collection of its state-of-the-art variants that
+
+1.  do not sacrifice simplicity of design,
+2.  are essentially tuning-free, and
+3.  can be efficiently implemented directly in MATLAB code.
+
+Currently, it only provides an implementation of the ‘jDE’ algorithm by
+[Brest at al. (2006)](https://doi.org/10.1109/TEVC.2006.872133).
+
+## Installation
+
+deoptimm requires MATLAB R2018b and above. It also requires the
+Statistics and Machine Learning Toolbox. For the time being deoptimm
+will not be packaged in a toolbox. Simply download the source code and
+documentation to a convenient folder. Help documentation is available in
+the form of a live script found under the folder *help*.
+
+-----
+
+### License
+
+deoptimm is licensed under the [GNU General Public License
+version 3](https://opensource.org/licenses/GPL-3.0). No user support
+provided.
