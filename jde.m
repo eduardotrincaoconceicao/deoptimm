@@ -45,7 +45,7 @@ function res = jde(lower, upper, fn, constr, meq, eps, varargin)
 %         global optimization over continuous spaces.
 %         Journal of Global Optimization 11, 341-359.
 
-%   Copyright 2014, 2019, Eduardo L. T. Conceicao
+%   Copyright 2014, 2019, 2023, Eduardo L. T. Conceicao
 %   Available under the GPL-3
 
 
@@ -114,7 +114,7 @@ function res = jde(lower, upper, fn, constr, meq, eps, varargin)
 
     % Evaluate/select ... -------------------------------------------------
     function child_()
-        ftrial = fn(trial); % Evaluate trial with your function
+        ftrial = fn(trial);
         if ftrial <= fpop(i)
             pop(:, i) = trial;
             fpop(i) = ftrial;
@@ -134,7 +134,7 @@ function res = jde(lower, upper, fn, constr, meq, eps, varargin)
         TAVtrial = sum( max(htrial, 0) );
         if TAVtrial > mu
             if TAVtrial <= TAVpop(i) % trial and target are both
-                pop(:, i) = trial;   % unfeasible, the one with smaller
+                pop(:, i) = trial;   % infeasible, the one with smaller
                 hpop(:, i) = htrial; % constraint violation is chosen
                 F(:, i) = Ftrial;    % or trial vector when both are
                 CR(i) = CRtrial;     % solutions of equal quality
@@ -170,7 +170,7 @@ function res = jde(lower, upper, fn, constr, meq, eps, varargin)
         htrial = constr1(trial);
         TAVtrial = sum( max(htrial, 0) );
         if TAVtrial > mu
-            if TAVtrial <= TAVpop(i) % trial and target are both unfeasible
+            if TAVtrial <= TAVpop(i) % trial and target are both infeasible
                 pop(:, i) = trial;
                 hpop(:, i) = htrial;
                 F(:, i) = Ftrial;
@@ -223,6 +223,7 @@ function res = jde(lower, upper, fn, constr, meq, eps, varargin)
 
     function h = constr_eq(par)
         h = constr(par);
+        h = h(:);
         h(equalIndex) = abs(h(equalIndex)) - eps;
     end
 
@@ -293,21 +294,21 @@ if ~isempty(constr)
                        {'numeric'}, {'scalar', 'integer', 'nonnegative'}, ...
                        mfilename, 'meq', 5)
     validateattributes(eps, ...
-                       {'numeric'}, {'positive', 'finite'}, ...
+                       {'numeric'}, {'vector', 'positive', 'finite'}, ...
                        mfilename, 'eps', 6)
-    if isscalar(eps), eps = repmat(eps, meq, 1); end
-    if length(eps) ~= meq
+    if ~(isscalar(eps) || length(eps) == meq)
         error('eps must be either of length meq, or length 1')
     end
+    eps = eps(:);
 end
 validateattributes(NP, ...
-                   {'numeric'}, {'scalar', 'integer'}, ...
+                   {'numeric'}, {'scalar', 'integer', 'nonnegative'}, ...
                    mfilename, 'NP')
 validateattributes(Fl, ...
-                   {'numeric'}, {'scalar','nonnegative'}, ...
+                   {'numeric'}, {'scalar', 'nonnegative', 'finite'}, ...
                    mfilename, 'Fl')
 validateattributes(Fu, ...
-                   {'numeric'}, {'scalar','nonnegative'}, ...
+                   {'numeric'}, {'scalar', 'nonnegative', 'finite'}, ...
                    mfilename, 'Fu')
 if Fl > Fu
     error('Fl <= Fu is not fulfilled')
@@ -322,23 +323,23 @@ validateattributes(tau_pF, ...
                    {'numeric'}, {'scalar', '>=', 0, '<=', 1}, ...
                    mfilename, 'tau_pF')
 validateattributes(jitter_factor, ...
-                   {'numeric'}, {'scalar','nonnegative'}, ...
+                   {'numeric'}, {'scalar', 'nonnegative', 'finite'}, ...
                    mfilename, 'jitter factor')
 validateattributes(tol, ...
-                   {'numeric'}, {'scalar'}, ...
+                   {'numeric'}, {'scalar', 'finite'}, ...
                    mfilename, 'tol')
 validateattributes(maxiter, ...
-                   {'numeric'}, {'scalar', 'integer','nonnegative'}, ...
+                   {'numeric'}, {'scalar', 'integer', 'nonnegative'}, ...
                    mfilename, 'maxiter')
 validateattributes(fnscale, ...
-                   {'numeric'}, {'scalar', 'positive'}, ...
+                   {'numeric'}, {'scalar', 'positive', 'finite'}, ...
                    mfilename, 'fnscale')
 validateattributes(compare_to, ...
                    {'char'}, {'nonempty'}, mfilename,'compare_to')
 validatestring(compare_to, {'median', 'mean'}, mfilename,'compare_to');
 if ~isempty(add_to_init_pop)
     validateattributes(add_to_init_pop, ...
-                       {'numeric'}, {'2d', 'nrows', d, 'nonnan'}, ...
+                       {'numeric'}, {'2d', 'nrows', d, 'finite', 'nonnan'}, ...
                        mfilename, 'add_to_init_pop')
     if any( (add_to_init_pop < repmat(lower, 1, size(add_to_init_pop, 2))) | ...
             (add_to_init_pop > repmat(upper, 1, size(add_to_init_pop, 2))) )
@@ -351,7 +352,7 @@ validateattributes(triter, ...
                    mfilename, 'triter')
 validateattributes(details, {'logical'}, {'scalar'}, mfilename, 'details')
 
-% Initialization:
+% Initialization
 if ~isempty(constr)
     if meq > 0
         equalIndex = 1:meq;
@@ -390,6 +391,9 @@ fpop = zeros(1, NP);
 for k = popIndex
     fpop(k) = fn(pop(:, k));
 end
+validateattributes(fpop, ...
+                   {'numeric'}, {'row', 'ncols', NP, 'nonnan'}, ...
+                   mfilename, 'fpop')
 if ~isempty(constr)
     hpop = zeros(length( constr1(pop(:, 1)) ), NP);
     TAVpop = zeros(1, NP);
@@ -397,6 +401,9 @@ if ~isempty(constr)
         hpop(:, k) = constr1(pop(:, k));
         TAVpop(k) = sum( max(hpop(:, k), 0) );
     end
+    validateattributes(hpop, ...
+                       {'numeric'}, {'2d', 'ncols', NP, 'nonnan'}, ...
+                       mfilename, 'hpop')
     mu = median(TAVpop);
 end
 
@@ -414,7 +421,7 @@ converge = stop_crit();
 convergence = 0;
 iteration = 0;
 
-while rule() % generation loop
+while rule() % Generation loop
     if iteration >= maxiter
         warning('maximum number of iterations reached without convergence')
         convergence = 1;

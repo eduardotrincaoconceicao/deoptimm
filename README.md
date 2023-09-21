@@ -14,16 +14,17 @@ from](https://img.shields.io/badge/code%20port%20from-DEoptimR-yellow.svg)](http
 
 ## Overview
 
-Differential Evolution (DE) stochastic algorithms for global
-optimization of problems with and without constraints. The aim is to
-curate a collection of its state-of-the-art variants that
+Differential Evolution (DE) stochastic heuristic algorithms for global
+optimization of problems with and without general constraints. The aim
+is to curate a collection of its variants that
 
 1.  do not sacrifice simplicity of design,
 2.  are essentially tuning-free, and
 3.  can be efficiently implemented directly in MATLAB code.
 
 Currently, it only provides an implementation of the ‘jDE’ algorithm by
-[Brest at al. (2006)](https://doi.org/10.1109/TEVC.2006.872133).
+[Brest at al. (2006)](https://doi.org/10.1109/TEVC.2006.872133) for
+single-objective optimization.
 
 ## Installation
 
@@ -33,10 +34,9 @@ will not be packaged in a toolbox. Simply download the source code and
 documentation to a convenient folder. Help documentation is available in
 the form of a live script found under the folder *help*.
 
------
+------------------------------------------------------------------------
 
 ### License
 
-deoptimm is licensed under the [GNU General Public License
-version 3](https://opensource.org/licenses/GPL-3.0). No user support
-provided.
+deoptimm is licensed under the [GNU General Public License version
+3](https://opensource.org/licenses/GPL-3.0). No user support provided.
