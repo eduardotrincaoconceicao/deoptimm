@@ -24,7 +24,7 @@ Currently, it only provides an implementation of the 'jDE' algorithm by [Brest a
 
 ## Installation
 
-deoptimm requires MATLAB R2018b and above. It also requires the Statistics and Machine Learning Toolbox. For the time being deoptimm will not be packaged in a toolbox. Simply download the source code and documentation to a convenient folder. Help documentation is available in the form of a live script found under the folder _help_.
+deoptimm requires MATLAB R2021a and above. It also requires the Statistics and Machine Learning Toolbox. For the time being deoptimm will not be packaged in a toolbox. Simply download the source code and documentation to a convenient folder. Help documentation is available in the form of a live script found under the folder _help_.
 
 ---
 ### License

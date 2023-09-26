@@ -28,7 +28,7 @@ single-objective optimization.
 
 ## Installation
 
-deoptimm requires MATLAB R2018b and above. It also requires the
+deoptimm requires MATLAB R2021a and above. It also requires the
 Statistics and Machine Learning Toolbox. For the time being deoptimm
 will not be packaged in a toolbox. Simply download the source code and
 documentation to a convenient folder. Help documentation is available in

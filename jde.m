@@ -1,4 +1,4 @@
-function res = jde(lower, upper, fn, constr, meq, eps, varargin)
+function res = jde(lower, upper, fn, options)
 %JDE Nonlinear constrained minimization via Differential Evolution.
 %   This implementation of the jDE algorithm [1] uses the
 %   DE/rand/1/either-or mutation strategy [2]. It also immediately replaces
@@ -7,19 +7,19 @@ function res = jde(lower, upper, fn, constr, meq, eps, varargin)
 %
 %   Examples:
 %{
-      jde(-[100 100], [100 100], @sf1, [], [], [], ...
-          'NP', 50, 'tol', 1e-7, 'maxiter', 800, 'trace', true)
-      jde(repmat(-500, 10, 1), repmat(500, 10, 1), @swf, [], [], [], ...
-          'tol', 1e-7, 'trace', true)
+      jde(-[100 100], [100 100], @sf1, ...
+          NP = 50, tol = 1e-7, maxiter = 800, trace = true)
+      jde(repmat(-500, 10, 1), repmat(500, 10, 1), @swf, ...
+          tol = 1e-7, trace = true)
 
-      jde([1e-5 1e-5], [16 16], @RND_obj, @RND_con, [], [], ...
-          'NP', 40, 'tol', 1e-7, 'trace', true)
+      jde([1e-5 1e-5], [16 16], @RND_obj, constr = @RND_con, ...
+          NP = 40, tol = 1e-7, trace = true)
       jde([100 1000 1000 10 10], [10000 10000 10000 1000 1000], ...
-          @HEND_obj, @HEND_con, [], [], ...
-          'tol', 1e-7, 'trace', true)
+          @HEND_obj, constr = @HEND_con, ...
+          tol = 1e-7, trace = true)
       jde([1500 1 3000 85 90 3 145], [2000 120 3500 93 95 12 162], ...
-          @alkylation_obj, @alkylation_con, [], [], ...
-          'tol', 1e-7, 'trace', true)
+          @alkylation_obj, constr = @alkylation_con, ...
+          tol = 1e-7, trace = true)
 %}
 
 %   References:
@@ -49,38 +49,31 @@ function res = jde(lower, upper, fn, constr, meq, eps, varargin)
 %   Available under the GPL-3
 
 
-    function parseInVarargin(argsToParse)
-    % Parse input arguments
-        for ii = 1:2:length(argsToParse)
-            validateattributes(argsToParse{ii}, {'char'}, {'nonempty'}, ...
-                               mfilename)
-            validatestring(argsToParse{ii}, ...
-                          {'NP', 'Fl', 'Fu', ...
-                           'tau_F', 'tau_CR', 'tau_pF', ...
-                           'jitter_factor', ...
-                           'tol', 'maxiter', 'fnscale', ...
-                           'compare_to', ...
-                           'add_to_init_pop', 'trace', 'triter', ...
-                           'details'}, ...
-                           mfilename, argsToParse{ii});
-            switch argsToParse{ii}
-                case 'NP', NP = argsToParse{ii+1};
-                case 'Fl', Fl = argsToParse{ii+1};
-                case 'Fu', Fu = argsToParse{ii+1};
-                case 'tau_F', tau_F = argsToParse{ii+1};
-                case 'tau_CR', tau_CR = argsToParse{ii+1};
-                case 'tau_pF', tau_pF = argsToParse{ii+1};
-                case 'jitter_factor', jitter_factor = argsToParse{ii+1};
-                case 'tol', tol = argsToParse{ii+1};
-                case 'maxiter', maxiter = argsToParse{ii+1};
-                case 'fnscale', fnscale = argsToParse{ii+1};
-                case 'compare_to', compare_to = argsToParse{ii+1};
-                case 'add_to_init_pop', add_to_init_pop = argsToParse{ii+1};
-                case 'trace', trace = argsToParse{ii+1};
-                case 'triter', triter = argsToParse{ii+1};
-                case 'details', details = argsToParse{ii+1};
-            end
-        end
+    arguments
+        lower (:, 1) {mustBeNonempty, mustBeNumeric, mustBeFinite}
+        upper (:, 1) {mustBeNonempty, mustBeNumeric, mustBeFinite}
+        fn function_handle {mustBeNonempty}
+        options.constr = []
+        options.meq (1, 1) {mustBeInteger, mustBeNonnegative} = 0
+        options.eps (:, 1) {mustBeNonempty, mustBePositive, mustBeFinite} = 1e-5
+        options.NP (1, 1) {mustBeInteger, mustBeNonnegative} = 10*length(lower)
+        options.Fl (1, 1) {mustBeNonnegative, mustBeFinite} = 0.1
+        options.Fu (1, 1) {mustBeNonnegative, mustBeFinite} = 1
+        options.tau_F (1, 1) {mustBeInRange(options.tau_F, 0, 1)} = 0.1
+        options.tau_CR (1, 1) {mustBeInRange(options.tau_CR, 0, 1)} = 0.1
+        options.tau_pF (1, 1) {mustBeInRange(options.tau_pF, 0, 1)} = 0.1
+        options.jitter_factor (1, 1) {mustBeNonnegative, mustBeFinite} = 0.001
+        options.tol (1, 1) {mustBeNumeric, mustBeFinite} = 1e-15
+        options.maxiter (1, 1) {mustBeInteger, mustBeNonnegative} ...
+            = 200*length(lower)
+        options.fnscale (1, 1) {mustBePositive, mustBeFinite} = 1
+        options.compare_to (1, 1) {mustBeA(options.compare_to, "string"), ...
+            mustBeMember(options.compare_to, ["median", "max"])} = "median"
+        options.add_to_init_pop = []
+        options.trace (1, 1) {mustBeA(options.trace, "logical")} = false
+        options.triter (1, 1) {mustBeInteger, ...
+            mustBeGreaterThanOrEqual(options.triter, 1)} = 1
+        options.details (1, 1) {mustBeA(options.details, "logical")} = false
     end
 
     function x = handle_bounds(x, u)
@@ -244,99 +237,45 @@ function res = jde(lower, upper, fn, constr, meq, eps, varargin)
         conv = (converge >= tol) || any(hpop(:, x_best_ind) > 0);
     end
 
-narginchk(3, 36) % Check number of input arguments
+% Extract arguments
+constr = options.constr;
+meq = options.meq;
+eps = options.eps;
+NP = options.NP;
+Fl = options.Fl;
+Fu = options.Fu;
+tau_F = options.tau_F;
+tau_CR = options.tau_CR;
+tau_pF = options.tau_pF;
+jitter_factor = options.jitter_factor;
+tol = options.tol;
+maxiter = options.maxiter;
+fnscale = options.fnscale;
+compare_to = options.compare_to;
+add_to_init_pop = options.add_to_init_pop;
+trace = options.trace;
+triter = options.triter;
+details = options.details;
+
 % Check input parameters
-validateattributes(lower, ...
-                   {'numeric'}, {'vector', 'finite'}, ...
-                   mfilename, 'lower', 1)
-validateattributes(upper, ...
-                   {'numeric'}, {'vector', 'finite'}, ...
-                   mfilename, 'upper', 2)
 d = length(lower);
 if length(upper) ~= d
     error('lower must have same length as upper')
 end
-lower = lower(:);
-upper = upper(:);
 if any(lower > upper)
     error('lower <= upper is not fulfilled')
 end
-validateattributes(fn, {'function_handle'}, {'nonempty'}, mfilename, 'fn', 3)
-
-% Deal with missing arguments
-% Set default values
-if nargin < 4 || isempty(constr), constr = []; end
-if nargin < 5 || isempty(meq), meq = 0; end
-if nargin < 6 || isempty(eps), eps = 1e-5; end
-NP = 10*d;
-Fl = 0.1;
-Fu = 1;
-tau_F = 0.1;
-tau_CR = 0.1;
-tau_pF = 0.1;
-jitter_factor = 0.001;
-tol = 1e-15;
-maxiter = 200*d;
-fnscale = 1;
-compare_to = 'median';
-add_to_init_pop = [];
-trace = false;
-triter = 1;
-details = false;
-parseInVarargin(varargin)
-
-% Check input parameters
 if ~isempty(constr)
     validateattributes(constr, ...
                        {'function_handle'}, {'nonempty'}, ...
-                       mfilename, 'constr', 4)
-    validateattributes(meq, ...
-                       {'numeric'}, {'scalar', 'integer', 'nonnegative'}, ...
-                       mfilename, 'meq', 5)
-    validateattributes(eps, ...
-                       {'numeric'}, {'vector', 'positive', 'finite'}, ...
-                       mfilename, 'eps', 6)
+                       mfilename, 'constr')
     if ~(isscalar(eps) || length(eps) == meq)
         error('eps must be either of length meq, or length 1')
     end
-    eps = eps(:);
 end
-validateattributes(NP, ...
-                   {'numeric'}, {'scalar', 'integer', 'nonnegative'}, ...
-                   mfilename, 'NP')
-validateattributes(Fl, ...
-                   {'numeric'}, {'scalar', 'nonnegative', 'finite'}, ...
-                   mfilename, 'Fl')
-validateattributes(Fu, ...
-                   {'numeric'}, {'scalar', 'nonnegative', 'finite'}, ...
-                   mfilename, 'Fu')
 if Fl > Fu
     error('Fl <= Fu is not fulfilled')
 end
-validateattributes(tau_F, ...
-                   {'numeric'}, {'scalar', '>=', 0, '<=', 1}, ...
-                   mfilename, 'tau_F')
-validateattributes(tau_CR, ...
-                   {'numeric'}, {'scalar', '>=', 0, '<=', 1}, ...
-                   mfilename, 'tau_CR')
-validateattributes(tau_pF, ...
-                   {'numeric'}, {'scalar', '>=', 0, '<=', 1}, ...
-                   mfilename, 'tau_pF')
-validateattributes(jitter_factor, ...
-                   {'numeric'}, {'scalar', 'nonnegative', 'finite'}, ...
-                   mfilename, 'jitter factor')
-validateattributes(tol, ...
-                   {'numeric'}, {'scalar', 'finite'}, ...
-                   mfilename, 'tol')
-validateattributes(maxiter, ...
-                   {'numeric'}, {'scalar', 'integer', 'nonnegative'}, ...
-                   mfilename, 'maxiter')
-validateattributes(fnscale, ...
-                   {'numeric'}, {'scalar', 'positive', 'finite'}, ...
-                   mfilename, 'fnscale')
-validateattributes(compare_to, ...
-                   {'char'}, {'nonempty'}, mfilename,'compare_to')
-validatestring(compare_to, {'median', 'mean'}, mfilename,'compare_to');
 if ~isempty(add_to_init_pop)
     validateattributes(add_to_init_pop, ...
                        {'numeric'}, {'2d', 'nrows', d, 'finite', 'nonnan'}, ...
@@ -346,11 +285,6 @@ if ~isempty(add_to_init_pop)
         error('add_to_init_pop must be between lower and upper')
     end
 end
-validateattributes(trace, {'logical'}, {'scalar'}, mfilename, 'trace')
-validateattributes(triter, ...
-                   {'numeric'}, {'scalar', 'integer', '>=', 1}, ...
-                   mfilename, 'triter')
-validateattributes(details, {'logical'}, {'scalar'}, mfilename, 'details')
 
 % Initialization
 if ~isempty(constr)
